@@ -50,4 +50,25 @@ class ApiService {
       };
     }
   }
+
+
+  // FUNGSI REQUEST OTP / FORGOT PASSWORD
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/forgot-password'), // Menuju route Laravel kamu besok
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal terhubung ke server backend: $e'
+      };
+    }
+  }
+  
 }

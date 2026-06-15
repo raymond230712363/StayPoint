@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../constants/themes.dart';
 import '../widgets/custom_input.dart';
 import '../api_service.dart';
-import 'login_screen.dart'; // Kita import biar bisa pindah ke login
+import 'login_screen.dart';
+import 'verification_screen.dart'; // <-- 1. SUDAH DI-IMPORT BIAR BISA PINDAH KE VERIFIKASI
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,49 +21,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void handleRegister() async {
     // Validasi standar sebelum tembak API
-  if (_nameController.text.isEmpty ||
-          _emailController.text.isEmpty ||
-          _phoneController.text.isEmpty ||
-          _passwordController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Semua field wajib diisi, gaes!'), backgroundColor: Colors.orange),
-        );
-        return;
-      }
-      
-      // ==================== TAMBAHKAN BLOK VALIDASI BARU INI GAES ====================
-      // 2. Validasi minimal 8 karakter untuk nomor telepon
-      else if (_phoneController.text.length < 8) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Nomor telepon minimal harus 8 angka ya, gaes!'), 
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-        return; // Stop proses, jangan tembak API dulu
-      }
-      // ===============================================================================
-
-      setState(() => _isLoading = true);
-      
-      // Tembak API Register Laravel
-      final hasil = await ApiService.register(
-        name: _nameController.text,
-        email: _emailController.text,
-        phone: _phoneController.text,
-        password: _passwordController.text, 
+    if (_nameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _phoneController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Semua field wajib diisi, gaes!'), backgroundColor: Colors.orange),
       );
+      return;
+    }
+    
+    // Validasi panjang nomor telepon minimal 8 angka
+    else if (_phoneController.text.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nomor telepon minimal harus 8 angka ya, gaes!'), 
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return; // Stop proses di sini
+    }
+
+    setState(() => _isLoading = true);
+    
+    // Tembak API Register Laravel (Urutan Named Parameter Aman & Anti-Ketukar)
+    final hasil = await ApiService.register(
+      name: _nameController.text,
+      email: _emailController.text,
+      phone: _phoneController.text,
+      password: _passwordController.text, 
+    );
 
     setState(() => _isLoading = false);
 
     if (hasil['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Akun sukses dibuat! Silakan login.'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('Registrasi berhasil! Silakan verifikasi akun Anda.'), backgroundColor: Colors.green),
       );
-      // Pindahkan langsung ke halaman login setelah sukses register
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+      
+      // Mengarahkan user ke halaman OTP terlebih dahulu dengan melempar data email-nya
+      Navigator.pushReplacement(
+        context, 
+        MaterialPageRoute(
+          builder: (context) => VerificationScreen(email: _emailController.text),
+        ),
+      );
+      // =================================================================================
     } else {
-      // Jika validasi Laravel gagal (misal email sudah terdaftar)
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -76,7 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBg, // Tetap pakai biru tua figma
+      backgroundColor: AppColors.primaryBg, 
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -84,8 +89,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 60),
-              
-              // Judul Halaman ala Figma
               const Text('Create Account', style: AppTextStyle.heading),
               const SizedBox(height: 8),
               Text(
@@ -93,12 +96,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
               ),
               const SizedBox(height: 40),
+          
+              //Label & Input Username
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Username', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+              ),
+              const SizedBox(height: 8),
+              CustomInputField(controller: _nameController, hintText: 'Create your user name'),
+              const SizedBox(height: 16),
 
-              // Empat Input Field Transparan Kapsul Sesuai Urutan Layar
-              CustomInputField(controller: _nameController, hintText: 'Username'),
-              CustomInputField(controller: _emailController, hintText: 'Email'),
-              CustomInputField(controller: _phoneController, hintText: 'Phone Number'),
-              CustomInputField(controller: _passwordController, hintText: 'Password', obscureText: true),
+              // Label & Input Email
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Email', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+              ),
+              const SizedBox(height: 8),
+              CustomInputField(controller: _emailController, hintText: 'Enter your email'),
+              const SizedBox(height: 16),
+
+              // Label & Input Phone Number
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Phone Number', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+              ),
+              const SizedBox(height: 8),
+              CustomInputField(controller: _phoneController, hintText: 'Enter your phone number'),
+              const SizedBox(height: 16),
+
+              // Label & Input Password
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Password', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+              ),
+              const SizedBox(height: 8),
+              CustomInputField(controller: _passwordController, hintText: 'Create your password', obscureText: true),
+              
               
               const SizedBox(height: 24),
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/themes.dart';
 import '../widgets/custom_input.dart';
 import '../api_service.dart';
+import 'package:staypoint/screens/forgot_password_screen.dart'; // <-- JALUR IMPOR ABSOLUT AMAN
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBg, // Background biru tua figma
+      backgroundColor: AppColors.primaryBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -47,8 +48,6 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 70),
-              
-              // Judul Halaman
               const Text('Login Account', style: AppTextStyle.heading),
               const SizedBox(height: 8),
               Text(
@@ -56,53 +55,41 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(color: AppColors.textWhite.withOpacity(0.6), fontSize: 13),
               ),
               const SizedBox(height: 48),
-
               CustomInputField(controller: _emailController, hintText: 'Email or Phone Number'),
               CustomInputField(controller: _passwordController, hintText: 'Password', obscureText: true),
-              
-              // Link Forgot Password
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Tombol Create Account 
                   TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+                    onPressed: () => Navigator.pop(context),
                     child: Text(
                       'Create Account',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8), 
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600, 
-                      ),
+                      style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ),
-
-                  // Tombol Forgot Password 
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()), // <-- BERSIH TANPA ERR
+                      );
+                    },
                     child: Text(
                       'Forgot Password?',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              
-              // Tombol Login 
               SizedBox(
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.15), // Efek tombol figma kamu
+                    backgroundColor: Colors.white.withOpacity(0.15),
                     foregroundColor: AppColors.textWhite,
-                    shape: StadiumBorder(), // Melengkung sempurna jadi kapsul
+                    shape: const StadiumBorder(),
                     side: BorderSide(color: Colors.white.withOpacity(0.3)),
                     elevation: 0,
                   ),
@@ -113,8 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // Tombol Oauth Sosial Media Bawah
               _buildSocialButton(Icons.g_mobiledata_rounded, 'Sign up with Google'),
               const SizedBox(height: 12),
               _buildSocialButton(Icons.facebook_rounded, 'Sign up with Facebook'),
@@ -125,17 +110,13 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Helper Widget untuk tombol sosial media bawah
   Widget _buildSocialButton(IconData icon, String text) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(icon, color: AppColors.textWhite, size: 20),
         const SizedBox(width: 8),
-        Text(
-          text,
-          style: TextStyle(color: AppColors.textWhite.withOpacity(0.8), fontSize: 13),
-        ),
+        Text(text, style: TextStyle(color: AppColors.textWhite.withOpacity(0.8), fontSize: 13)),
       ],
     );
   }
