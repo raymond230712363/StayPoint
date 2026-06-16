@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart'; // Import splash screen baru
+import 'screens/splash_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/main_navigation.dart';
 
 void main() => runApp(const MyApp());
 
@@ -14,7 +16,21 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
       ),
-      home: const SplashScreen(), // <-- Set ke sini gaes!
+      home: const SplashScreen(), 
+      onGenerateRoute: (settings) {
+        if (settings.name == '/main') {
+          final String usernameData = settings.arguments as String? ?? 'User';
+          return MaterialPageRoute(
+            builder: (context) => MainNavigation(username: usernameData),
+          );
+        }
+        return null;
+      },
+      
+      // Rute static biasa yang gak butuh data dinamis
+      routes: {
+        '/login': (context) => const LoginScreen(),
+      },
     );
   }
 }

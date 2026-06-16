@@ -72,6 +72,8 @@ class _SplashScreenState extends State<SplashScreen> {
                       Navigator.pushReplacement(
                         context,
                         PageRouteBuilder(
+                          // DI SINI CUMA DITAMBAHIN INI BIAR FLUTTER PAHAM RUTE, TAMPILAN TETEP SAMA!
+                          settings: const RouteSettings(name: '/splash'), 
                           pageBuilder: (context, anim, secAnim) => const OnboardingScreen(),
                           transitionsBuilder: (context, anim, secAnim, child) => FadeTransition(opacity: anim, child: child),
                           transitionDuration: const Duration(milliseconds: 600),

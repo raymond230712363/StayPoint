@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/themes.dart';
 import '../widgets/custom_input.dart';
 import '../api_service.dart';
-import 'package:staypoint/screens/forgot_password_screen.dart'; // <-- JALUR IMPOR ABSOLUT AMAN
+import 'package:staypoint/screens/forgot_password_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,9 +22,18 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (hasil['success'] == true) {
-      String namaUser = hasil['user']['name'];
+      String namaUser = hasil['user']['name']; // Ambil data dinamis asli dari database
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Selamat datang, $namaUser!'), backgroundColor: Colors.green),
+      );
+
+      // ==================== KUNCINYA DI SINI GAES! ====================
+      // Kita panggil rute '/main' (MainNavigation) sambil bawa data namaUser asli
+      Navigator.pushReplacementNamed(
+        context,
+        '/main',
+        arguments: namaUser, // <-- DIKIRIM SECARA DINAMIS KE MAIN.DART!
       );
     } else {
       showDialog(
@@ -71,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()), // <-- BERSIH TANPA ERR
+                        MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
                       );
                     },
                     child: Text(
