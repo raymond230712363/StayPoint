@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import '../constants/themes.dart';
 import '../widgets/custom_input.dart';
 import '../api_service.dart';
+import '../services/auth_service.dart';
+import '../main.dart';
+import '../services/api_service.dart' as api;
 import 'login_screen.dart';
-import 'verification_screen.dart'; // <-- 1. SUDAH DI-IMPORT BIAR BISA PINDAH KE VERIFIKASI
+import 'verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -30,51 +33,106 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       return;
     }
-    
+
     // Validasi panjang nomor telepon minimal 8 angka
     else if (_phoneController.text.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nomor telepon minimal harus 8 angka ya, gaes!'), 
+          content: Text('Nomor telepon minimal harus 8 angka ya, gaes!'),
           backgroundColor: Colors.redAccent,
         ),
       );
-      return; // Stop proses di sini
+      return;
     }
 
     setState(() => _isLoading = true);
-    
-    // Tembak API Register Laravel (Urutan Named Parameter Aman & Anti-Ketukar)
-    final hasil = await ApiService.register(
-      name: _nameController.text,
-      email: _emailController.text,
-      phone: _phoneController.text,
-      password: _passwordController.text, 
-    );
 
-    setState(() => _isLoading = false);
+    try {
+      // Tembak API Register Laravel
+      final hasil = await ApiService.register(
+        name: _nameController.text,
+        email: _emailController.text,
+        phone: _phoneController.text,
+        password: _passwordController.text,
+      );
 
-    if (hasil['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registrasi berhasil! Silakan verifikasi akun Anda.'), backgroundColor: Colors.green),
-      );
-      
-      // Mengarahkan user ke halaman OTP terlebih dahulu dengan melempar data email-nya
-      Navigator.pushReplacement(
-        context, 
-        MaterialPageRoute(
-          builder: (context) => VerificationScreen(email: _emailController.text),
-        ),
-      );
-      // =================================================================================
-    } else {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Register Gagal'),
-          content: Text(hasil['message'] ?? 'Periksa kembali data yang kamu masukkan.'),
-        ),
-      );
+      setState(() => _isLoading = false);
+
+      if (hasil['success'] == true) {
+        // Cek apakah langsung bisa login tanpa verifikasi
+        if (hasil['token'] != null) {
+          final token = hasil['token'] as String;
+          await AuthService.saveToken(token);
+          await AuthService.saveUserData(hasil['user']['name'] ?? 'User');
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Registrasi berhasil! Selamat datang.'),
+                backgroundColor: Colors.green,
+              ),
+            );
+
+            // Navigate langsung ke home dengan MainNavigation
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => MainNavigation(token: token),
+              ),
+            );
+          }
+        } else {
+          // Jika butuh verifikasi
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Registrasi berhasil! Silakan verifikasi akun Anda.'),
+                backgroundColor: Colors.green,
+              ),
+            );
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VerificationScreen(email: _emailController.text),
+              ),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Register Gagal'),
+              content: Text(hasil['message'] ?? 'Periksa kembali data yang kamu masukkan.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('Terjadi kesalahan: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
@@ -168,8 +226,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Text("Already have an account? ", style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
                   GestureDetector(
                     onTap: () {
-                      // Buka halaman Login
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
                     },
                     child: const Text(
                       'Login',
@@ -183,6 +245,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   Widget _buildSocialButton(IconData icon, String text) {

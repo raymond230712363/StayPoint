@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import '../constants/themes.dart';
 import '../widgets/custom_input.dart';
 import '../api_service.dart';
-import 'package:staypoint/screens/forgot_password_screen.dart'; // <-- JALUR IMPOR ABSOLUT AMAN
+import '../services/auth_service.dart';
+import '../pages/hotel_list_page.dart';
+import '../services/api_service.dart' as api;
+import 'package:staypoint/screens/forgot_password_screen.dart';
+import 'package:staypoint/screens/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,23 +21,88 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   void handleLogin() async {
-    setState(() => _isLoading = true);
-    final hasil = await ApiService.login(_emailController.text, _passwordController.text);
-    setState(() => _isLoading = false);
-
-    if (hasil['success'] == true) {
-      String namaUser = hasil['user']['name'];
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Selamat datang, $namaUser!'), backgroundColor: Colors.green),
-      );
-    } else {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Login Gagal'),
-          content: Text(hasil['message'] ?? 'Email atau password salah.'),
+        const SnackBar(
+          content: Text('Email dan password harus diisi!'),
+          backgroundColor: Colors.red,
         ),
       );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final hasil = await ApiService.login(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      setState(() => _isLoading = false);
+
+      if (hasil['success'] == true) {
+        String namaUser = hasil['user']['name'];
+        String token = hasil['token'] ?? '';
+
+        // Simpan token
+        if (token.isNotEmpty) {
+          await AuthService.saveToken(token);
+          await AuthService.saveUserData(namaUser);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Selamat datang, $namaUser!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // Navigate ke HomePage
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => HotelListPage(
+                apiService: api.ApiService(token: token),
+              ),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Login Gagal'),
+              content: Text(hasil['message'] ?? 'Email atau password salah.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('Terjadi kesalahan: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
@@ -52,31 +121,57 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               Text(
                 'Enter your email & password number',
-                style: TextStyle(color: AppColors.textWhite.withOpacity(0.6), fontSize: 13),
+                style: TextStyle(
+                  color: AppColors.textWhite.withOpacity(0.6),
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 48),
-              CustomInputField(controller: _emailController, hintText: 'Email or Phone Number'),
-              CustomInputField(controller: _passwordController, hintText: 'Password', obscureText: true),
+              CustomInputField(
+                controller: _emailController,
+                hintText: 'Email or Phone Number',
+              ),
+              CustomInputField(
+                controller: _passwordController,
+                hintText: 'Password',
+                obscureText: true,
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RegisterScreen(),
+                        ),
+                      );
+                    },
                     child: Text(
                       'Create Account',
-                      style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()), // <-- BERSIH TANPA ERR
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen(),
+                        ),
                       );
                     },
                     child: Text(
                       'Forgot Password?',
-                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -94,9 +189,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     elevation: 0,
                   ),
                   onPressed: _isLoading ? null : handleLogin,
-                  child: _isLoading 
-                    ? const CircularProgressIndicator(color: AppColors.textWhite)
-                    : const Text('Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(
+                          color: AppColors.textWhite,
+                        )
+                      : const Text(
+                          'Login',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 40),
@@ -116,8 +219,21 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Icon(icon, color: AppColors.textWhite, size: 20),
         const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: AppColors.textWhite.withOpacity(0.8), fontSize: 13)),
+        Text(
+          text,
+          style: TextStyle(
+            color: AppColors.textWhite.withOpacity(0.8),
+            fontSize: 13,
+          ),
+        ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }
