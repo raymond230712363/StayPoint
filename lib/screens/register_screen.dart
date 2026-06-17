@@ -3,7 +3,7 @@ import '../constants/themes.dart';
 import '../widgets/custom_input.dart';
 import '../api_service.dart';
 import 'login_screen.dart';
-import 'verification_screen.dart'; // <-- 1. SUDAH DI-IMPORT BIAR BISA PINDAH KE VERIFIKASI
+import 'verification_screen.dart'; 
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,7 +20,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
 
   void handleRegister() async {
-    // Validasi standar sebelum tembak API
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _phoneController.text.isEmpty ||
@@ -31,20 +30,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
     
-    // Validasi panjang nomor telepon minimal 8 angka
-    else if (_phoneController.text.length < 8) {
+    if (_phoneController.text.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Nomor telepon minimal harus 8 angka ya, gaes!'), 
           backgroundColor: Colors.redAccent,
         ),
       );
-      return; // Stop proses di sini
+      return; 
     }
 
     setState(() => _isLoading = true);
     
-    // Tembak API Register Laravel (Urutan Named Parameter Aman & Anti-Ketukar)
     final hasil = await ApiService.register(
       name: _nameController.text,
       email: _emailController.text,
@@ -55,18 +52,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = false);
 
     if (hasil['success'] == true) {
+      String namaUser = hasil['user']?['name'] ?? _nameController.text;
+      String emailUser = hasil['user']?['email'] ?? _emailController.text;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Registrasi berhasil! Silakan verifikasi akun Anda.'), backgroundColor: Colors.green),
       );
       
-      // Mengarahkan user ke halaman OTP terlebih dahulu dengan melempar data email-nya
+
       Navigator.pushReplacement(
         context, 
         MaterialPageRoute(
-          builder: (context) => VerificationScreen(email: _emailController.text),
+          builder: (context) => VerificationScreen(
+            username: namaUser, 
+            email: emailUser,   
+          ),
         ),
       );
-      // =================================================================================
+      
     } else {
       showDialog(
         context: context,
@@ -97,7 +100,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 40),
           
-              //Label & Input Username
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Username', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
@@ -106,7 +108,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               CustomInputField(controller: _nameController, hintText: 'Create your user name'),
               const SizedBox(height: 16),
 
-              // Label & Input Email
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Email', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
@@ -115,7 +116,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               CustomInputField(controller: _emailController, hintText: 'Enter your email'),
               const SizedBox(height: 16),
 
-              // Label & Input Phone Number
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Phone Number', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
@@ -124,18 +124,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               CustomInputField(controller: _phoneController, hintText: 'Enter your phone number'),
               const SizedBox(height: 16),
 
-              // Label & Input Password
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Password', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
               ),
               const SizedBox(height: 8),
               CustomInputField(controller: _passwordController, hintText: 'Create your password', obscureText: true),
-              
-              
               const SizedBox(height: 24),
 
-              // Tombol Sign Up Kapsul Besar
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -155,20 +151,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Tombol Oauth Sosial Media Bawah
               _buildSocialButton(Icons.g_mobiledata_rounded, 'Sign up with Google'),
               const SizedBox(height: 12),
               _buildSocialButton(Icons.facebook_rounded, 'Sign up with Facebook'),
               const SizedBox(height: 40),
 
-              // Navigasi ke Login jika sudah punya akun
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text("Already have an account? ", style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
                   GestureDetector(
                     onTap: () {
-                      // Buka halaman Login
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
                     },
                     child: const Text(
@@ -191,10 +184,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Icon(icon, color: AppColors.textWhite, size: 20),
         const SizedBox(width: 8),
-        Text(
-          text,
-          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13),
-        ),
+        Text(text, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
       ],
     );
   }

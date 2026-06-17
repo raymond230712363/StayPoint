@@ -5,7 +5,8 @@ import 'profile_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   final String username;
-  const MainNavigation({super.key, required this.username});
+  final String email;
+  const MainNavigation({super.key, required this.username, required this.email});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -13,15 +14,34 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  // === PERBAIKAN 1: BUAT VARIABEL STATE LOKAL YANG BISA BERUBAH ===
+  late String _currentUsername;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUsername = widget.username; // Ambil nilai awal dari login
+  }
 
   @override
   Widget build(BuildContext context) {
     // Jalur screens utama yang dikontrol footer bawah
     final List<Widget> _screens = [
-      HomeScreen(username: widget.username), // <-- Sinkron dengan parameter HomeScreen-mu!
+      // === PERBAIKAN 2: HOME SCREEN MEMBACA VARIABEL DINAMIS ===
+      HomeScreen(username: _currentUsername), 
       const Scaffold(backgroundColor: AppColors.primaryBg, body: Center(child: Text('Favorite Screen', style: TextStyle(color: Colors.white)))),
       const Scaffold(backgroundColor: AppColors.primaryBg, body: Center(child: Text('Offers Screen', style: TextStyle(color: Colors.white)))),
-      ProfileScreen(username: widget.username), 
+      
+      // === PERBAIKAN 3: PROFILE SCREEN IKUT MENERIMA FUNGSI CALLBACK UNTUK UPDATE NAMA ===
+      ProfileScreen(
+        username: _currentUsername, 
+        email: widget.email,
+        onNameUpdated: (newParamName) {
+          setState(() {
+            _currentUsername = newParamName; // Homepage otomatis ikut ganti secara live!
+          });
+        },
+      ),
     ];
 
     return Scaffold(

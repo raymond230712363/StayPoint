@@ -33,7 +33,6 @@ class _SplashScreenState extends State<SplashScreen> {
             children: [
               const SizedBox(height: 20),
               
-              // TENGAH: Tempat naruh Logo SVG kamu dengan animasi fade-in
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 1200),
                 opacity: _animate ? 1.0 : 0.0,

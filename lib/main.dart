@@ -17,17 +17,24 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const SplashScreen(), 
+      
       onGenerateRoute: (settings) {
         if (settings.name == '/main') {
-          final String usernameData = settings.arguments as String? ?? 'User';
+          final Map<String, dynamic> userData = settings.arguments as Map<String, dynamic>? ?? {
+            'username': 'User',
+            'email': 'user@gmail.com',
+          };
+          
           return MaterialPageRoute(
-            builder: (context) => MainNavigation(username: usernameData),
+            builder: (context) => MainNavigation(
+              username: userData['username'] ?? 'User',
+              email: userData['email'] ?? 'user@gmail.com',
+            ),
           );
         }
         return null;
       },
       
-      // Rute static biasa yang gak butuh data dinamis
       routes: {
         '/login': (context) => const LoginScreen(),
       },

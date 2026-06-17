@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/themes.dart';
 import '../widgets/custom_input.dart';
-import '../api_service.dart'; // <-- SUDAH DI-IMPORT BIAR BISA TEMBAK API
+import '../api_service.dart';
 import 'verification_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -16,7 +16,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isLoading = false;
 
   void handleForgotPassword() async {
-    // 1. Validasi lokal apakah kolom email kosong
+    // Validasi lokal apakah kolom email kosong
     if (_emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Email wajib diisi, gaes!'), backgroundColor: Colors.orange),
@@ -26,12 +26,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => _isLoading = true);
     
-    // 2. Tembak fungsi API di ApiService
+    // embak fungsi API di ApiService
     final hasil = await ApiService.forgotPassword(_emailController.text);
     
     setState(() => _isLoading = false);
 
-    // 3. Cek respon dari backend Laravel
+    // Cek respon dari backend Laravel
     if (hasil['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Kode OTP berhasil dikirim!'), backgroundColor: Colors.green),
@@ -41,11 +41,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => VerificationScreen(email: _emailController.text),
+          builder: (context) => VerificationScreen(email: _emailController.text,
+          username: hasil['user']?['name'] ?? 'user', 
+          ),
         ),
       );
     } else {
-      // EROR HANDLING: Jika email tidak ada di database Laravel
+      // EROR HANDLING
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -53,7 +55,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           content: Text(hasil['message'] ?? 'Email yang kamu masukkan belum terdaftar di StayPoint, gaes.'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context), // Tutup dialog
+              onPressed: () => Navigator.pop(context), 
               child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],

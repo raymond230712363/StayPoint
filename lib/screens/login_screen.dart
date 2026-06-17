@@ -22,18 +22,19 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (hasil['success'] == true) {
-      String namaUser = hasil['user']['name']; // Ambil data dinamis asli dari database
+      String namaUser = hasil['user']['name']; 
+      String emailUser = hasil['user']['email'] ?? 'user@gmail.com'; 
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Selamat datang, $namaUser!'), backgroundColor: Colors.green),
       );
-
-      // ==================== KUNCINYA DI SINI GAES! ====================
-      // Kita panggil rute '/main' (MainNavigation) sambil bawa data namaUser asli
       Navigator.pushReplacementNamed(
         context,
         '/main',
-        arguments: namaUser, // <-- DIKIRIM SECARA DINAMIS KE MAIN.DART!
+        arguments: {
+          'username': namaUser,
+          'email': emailUser,
+        }, 
       );
     } else {
       showDialog(

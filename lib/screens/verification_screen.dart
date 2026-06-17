@@ -2,20 +2,30 @@ import 'package:flutter/material.dart';
 import '../constants/themes.dart';
 
 class VerificationScreen extends StatefulWidget {
+  final String username; 
   final String email;
-  const VerificationScreen({super.key, required this.email});
+  
+  const VerificationScreen({super.key, required this.username, required this.email});
 
   @override
   State<VerificationScreen> createState() => _VerificationScreenState();
 }
 
 class _VerificationScreenState extends State<VerificationScreen> {
-  // 4 Controller untuk masing-masing kotak angka OTP
   final _code1Controller = TextEditingController();
   final _code2Controller = TextEditingController();
   final _code3Controller = TextEditingController();
   final _code4Controller = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _code1Controller.dispose();
+    _code2Controller.dispose();
+    _code3Controller.dispose();
+    _code4Controller.dispose();
+    super.dispose();
+  }
 
   void handleVerify() async {
     String otpCode = _code1Controller.text + _code2Controller.text + _code3Controller.text + _code4Controller.text;
@@ -30,24 +40,33 @@ class _VerificationScreenState extends State<VerificationScreen> {
     setState(() => _isLoading = true);
 
     // TODO: Tempat tembak API Verifikasi OTP Laravel kamu
-    await Future.delayed(const Duration(seconds: 2)); // Simulasi loading
+    await Future.delayed(const Duration(seconds: 2)); 
 
     setState(() => _isLoading = false);
 
-    // Jika sukses verifikasi, bisa diarahkan ke halaman Reset Password Baru atau balik ke Login
     showDialog(
       context: context,
+      barrierDismissible: false, 
       builder: (context) => AlertDialog(
-        title: const Text('Verifikasi Sukses'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Verifikasi Sukses', style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('Akun atau email kamu berhasil diverifikasi!'),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Tutup dialog
-              Navigator.pop(context); // Balik dari verifikasi
-              Navigator.pop(context); // Balik ke halaman Login
+              Navigator.pop(context); 
+
+              Navigator.pushNamedAndRemoveUntil(
+                context, 
+                '/main', 
+                (route) => false, 
+                arguments: {
+                  'username': widget.username,
+                  'email': widget.email,
+                },
+              );
             },
-            child: const Text('OK'),
+            child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -74,7 +93,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
               ),
               const SizedBox(height: 40),
 
-              // Judul Halaman
               const Text('Verification', style: AppTextStyle.heading),
               const SizedBox(height: 8),
               Text(
@@ -84,7 +102,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
               ),
               const SizedBox(height: 50),
 
-              // Barisan 4 Kotak Input OTP ala Figma
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -96,7 +113,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
               ),
               const SizedBox(height: 40),
 
-              // Tombol Verify Kapsul Besar
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -121,30 +137,28 @@ class _VerificationScreenState extends State<VerificationScreen> {
     );
   }
 
-  // Helper Widget untuk membuat kotak input OTP otomatis pindah fokus saat diketik
   Widget _buildOtpBox(TextEditingController controller, {required bool first, required bool last}) {
     return SizedBox(
       width: 60,
       height: 60,
       child: TextField(
         controller: controller,
-        autofocus: true,
+        autofocus: first, 
         onChanged: (value) {
           if (value.length == 1 && last == false) {
-            FocusScope.of(context).nextFocus(); // Pindah otomatis ke kotak kanan
+            FocusScope.of(context).nextFocus();
           }
           if (value.isEmpty && first == false) {
-            FocusScope.of(context).previousFocus(); // Mundur kalau dihapus
+            FocusScope.of(context).previousFocus();
           }
         },
         showCursor: false,
-        readOnly: false,
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         keyboardType: TextInputType.number,
         maxLength: 1,
         decoration: InputDecoration(
-          counterText: "", // Sembunyikan counter text panjang di bawah
+          counterText: "",
           enabledBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Colors.white.withOpacity(0.3), width: 2),
             borderRadius: BorderRadius.circular(12),

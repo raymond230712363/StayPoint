@@ -11,11 +11,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Data Dummy untuk Kategori
   final List<String> _categories = ['All', 'Hotel', 'Resort', 'Villa', 'Apartment'];
   int _selectedCategoryIndex = 0;
 
-  // Data Dummy untuk List Hotel Popular (Horizontal)
   final List<Map<String, dynamic>> _popularHotels = [
     {
       'name': 'Hill Side Villa',
@@ -156,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 28),
 
-              // ==================== 3. POPULAR HOTELS SECTION ====================
+              // ==================== POPULAR HOTELS SECTION ====================
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Row(
@@ -280,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 28),
 
-              // ==================== 4. NEW SECTION: NEARBY HOTELS (Vertikal) ====================
+              // ==================== NEARBY HOTELS (Vertikal) ====================
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Row(
@@ -298,7 +296,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               
-              // List Vertikal Menggunakan ListView.builder dengan Physics disable agar tidak konflik scroll
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -359,6 +356,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
+
                         // Rating Bintang Kanan Atas
                         Column(
                           mainAxisAlignment: MainAxisAlignment.start,
@@ -380,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-              const SizedBox(height: 100), // Spacing lebih bawah biar gak ketutupan footer melayang
+              const SizedBox(height: 100), 
             ],
           ),
         ),
