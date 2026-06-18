@@ -43,6 +43,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         MaterialPageRoute(
           builder: (context) => VerificationScreen(email: _emailController.text,
           username: hasil['user']?['name'] ?? 'user', 
+          isResetPasswordFlow: true,
           ),
         ),
       );

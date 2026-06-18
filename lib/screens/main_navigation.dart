@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import '../constants/themes.dart';
+import 'booking_history_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   final String username;
   final String email;
-  const MainNavigation({super.key, required this.username, required this.email});
+  const MainNavigation({
+    super.key,
+    required this.username,
+    required this.email,
+  });
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -28,17 +33,23 @@ class _MainNavigationState extends State<MainNavigation> {
     // Jalur screens utama yang dikontrol footer bawah
     final List<Widget> _screens = [
       // === PERBAIKAN 2: HOME SCREEN MEMBACA VARIABEL DINAMIS ===
-      HomeScreen(username: _currentUsername), 
-      const Scaffold(backgroundColor: AppColors.primaryBg, body: Center(child: Text('Favorite Screen', style: TextStyle(color: Colors.white)))),
-      const Scaffold(backgroundColor: AppColors.primaryBg, body: Center(child: Text('Offers Screen', style: TextStyle(color: Colors.white)))),
-      
+      HomeScreen(username: _currentUsername, email: widget.email),
+      const Scaffold(
+        backgroundColor: AppColors.primaryBg,
+        body: Center(
+          child: Text('Favorite Screen', style: TextStyle(color: Colors.white)),
+        ),
+      ),
+      BookingHistoryScreen(email: widget.email),
+
       // === PERBAIKAN 3: PROFILE SCREEN IKUT MENERIMA FUNGSI CALLBACK UNTUK UPDATE NAMA ===
       ProfileScreen(
-        username: _currentUsername, 
+        username: _currentUsername,
         email: widget.email,
         onNameUpdated: (newParamName) {
           setState(() {
-            _currentUsername = newParamName; // Homepage otomatis ikut ganti secara live!
+            _currentUsername =
+                newParamName; // Homepage otomatis ikut ganti secara live!
           });
         },
       ),
@@ -50,10 +61,14 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: Container(
         margin: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(220), 
+          color: Colors.white.withAlpha(220),
           borderRadius: BorderRadius.circular(35),
           boxShadow: [
-            BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 20, spreadRadius: 1),
+            BoxShadow(
+              color: Colors.black.withAlpha(40),
+              blurRadius: 20,
+              spreadRadius: 1,
+            ),
           ],
         ),
         child: ClipRRect(
@@ -73,10 +88,22 @@ class _MainNavigationState extends State<MainNavigation> {
             selectedFontSize: 12,
             unselectedFontSize: 12,
             items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.favorite_rounded), label: 'Favorite'),
-              BottomNavigationBarItem(icon: Icon(Icons.percent_rounded), label: 'Offers'),
-              BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'My profile'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.favorite_rounded),
+                label: 'Favorite',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.receipt_long_rounded),
+                label: 'Bookings',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_rounded),
+                label: 'My profile',
+              ),
             ],
           ),
         ),

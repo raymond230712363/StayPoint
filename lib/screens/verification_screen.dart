@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import '../constants/themes.dart';
+import 'login_screen.dart';
 import 'reset_password_screen.dart';
 
 class VerificationScreen extends StatefulWidget {
   final String username; 
   final String email;
+  final bool isResetPasswordFlow;
   
-  const VerificationScreen({super.key, required this.username, required this.email});
+  const VerificationScreen({
+    super.key,
+    required this.username,
+    required this.email,
+    this.isResetPasswordFlow = false,
+  });
 
   @override
   State<VerificationScreen> createState() => _VerificationScreenState();
 }
-
-class _RegisterScreenState {} 
 
 class _VerificationScreenState extends State<VerificationScreen> {
   final _code1Controller = TextEditingController();
@@ -63,7 +68,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ResetPasswordScreen(email: widget.email), // Oper emailnya ke form ganti sandi baru
+                  builder: (context) => widget.isResetPasswordFlow
+                      ? ResetPasswordScreen(email: widget.email)
+                      : const LoginScreen(),
                 ),
               );
             },
