@@ -6,12 +6,14 @@ import 'booking_success_screen.dart';
 class BookingFormScreen extends StatefulWidget {
   final Map<String, dynamic>? room;
   final String email;
+  final String username;
   final Map<String, dynamic>? booking;
 
   const BookingFormScreen({
     super.key,
     this.room,
     required this.email,
+    required this.username,
     this.booking,
   });
 
@@ -164,6 +166,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           MaterialPageRoute(
             builder: (_) => BookingSuccessScreen(
               booking: Map<String, dynamic>.from(result['booking']),
+              username: widget.username ?? "User", // <-- TAMBAHKAN BARIS INI (oper username asli)
+              email: widget.email,
             ),
           ),
         );

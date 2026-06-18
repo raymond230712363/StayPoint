@@ -11,6 +11,7 @@ class MainNavigation extends StatefulWidget {
     super.key,
     required this.username,
     required this.email,
+
   });
 
   @override
@@ -40,7 +41,7 @@ class _MainNavigationState extends State<MainNavigation> {
           child: Text('Favorite Screen', style: TextStyle(color: Colors.white)),
         ),
       ),
-      BookingHistoryScreen(email: widget.email),
+      BookingHistoryScreen(email: widget.email, username: _currentUsername),
 
       // === PERBAIKAN 3: PROFILE SCREEN IKUT MENERIMA FUNGSI CALLBACK UNTUK UPDATE NAMA ===
       ProfileScreen(

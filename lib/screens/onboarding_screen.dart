@@ -39,7 +39,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         itemBuilder: (context, index) {
           return Column(
             children: [
-              // 1. Bagian Atas: Gambar Full Screen Melengkung Bawah
               Expanded(
                 flex: 5,
                 child: Container(
@@ -57,7 +56,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
               
-              // 2. Bagian Bawah: Panel Biru Tua Isi Teks & Tombol
               Expanded(
                 flex: 4,
                 child: Padding(
@@ -65,7 +63,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // Judul Text Sesuai Slide
+
                       Text(
                         onboardingData[index]["title"]!,
                         textAlign: TextAlign.center,
@@ -78,19 +76,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       
                       Column(
                         children: [
-                          // Tombol Sign Up Kapsul Putih/Abu Terang ala Figma
                           SizedBox(
                             width: double.infinity,
                             height: 48,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFE2E8F0), // Warna abu terang figma
+                                backgroundColor: const Color(0xFFE2E8F0),
                                 foregroundColor: AppColors.primaryBg,
                                 shape: const StadiumBorder(),
                                 elevation: 0,
                               ),
                               onPressed: () {
-                                // Arahkan ke halaman register atau login dulu
                                 Navigator.push(
                                   context, 
                                   MaterialPageRoute(builder: (context) => const RegisterScreen())
@@ -100,6 +96,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
+                          
                           // Link text ke Login
                           GestureDetector(
                             onTap: () {

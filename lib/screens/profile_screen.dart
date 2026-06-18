@@ -23,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   bool _isProfileLoading = false;
   File? _imageFile;
+  String? _serverPhotoUrl; 
   final ImagePicker _picker = ImagePicker();
   final String _defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80';
 
@@ -31,6 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _usernameController = TextEditingController(text: widget.username);
     _emailController = TextEditingController(text: widget.email);
+    _fetchProfileFreshData(); 
   }
 
   @override
@@ -42,14 +44,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  // ==================== KONFIRMASI UPDATE ====================
+  void _fetchProfileFreshData() async {
+    setState(() => _isProfileLoading = true);
+
+    final hasil = await ApiService.getBookings(widget.email);
+
+    if (hasil['success'] == true &&
+        hasil['bookings'] != null &&
+        hasil['bookings'].isNotEmpty) {
+
+      final firstBooking = hasil['bookings'][0];
+
+      if (firstBooking['user'] != null) {
+        final userUpdate = firstBooking['user'];
+
+        setState(() {
+          _phoneController.text =
+              userUpdate['phone']?.toString() ?? '';
+
+          if (userUpdate['profile_photo'] != null &&
+              userUpdate['profile_photo'].toString().isNotEmpty) {
+
+            _serverPhotoUrl =
+                'http://10.0.2.2:8000/storage/${userUpdate['profile_photo']}';
+
+            print("FOTO URL = $_serverPhotoUrl");
+          }
+        });
+      }
+    }
+
+    setState(() => _isProfileLoading = false);
+  }
+
   void _showUpdateConfirmationDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Change User name!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: const Text('Are you sure you want to change ur Username?', style: TextStyle(fontSize: 13, color: Colors.black54)),
+        title: const Text('Update Profile!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: const Text('Are you sure you want to save your new profile changes and picture?', style: TextStyle(fontSize: 13, color: Colors.black54)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context), 
@@ -67,47 +101,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-
-  void _executeProfileUpdate() async {
+void _executeProfileUpdate() async {
     setState(() => _isProfileLoading = true);
     
     String namaBaruDiInput = _usernameController.text;
     String nomorBaruDiInput = _phoneController.text;
+    String emailUser = _emailController.text;
 
     final hasil = await ApiService.updateProfile(
-      namaBaruDiInput, 
-      nomorBaruDiInput,
-      _emailController.text, 
+      name: namaBaruDiInput, 
+      phone: nomorBaruDiInput,
+      email: emailUser, 
+      photoPath: _imageFile?.path, 
     );
     
     setState(() => _isProfileLoading = false);
 
-    if (hasil['success'] == true) {
+    if (hasil['success'] == true || hasil['status'] == 'success') {
+  setState(() {
+    _usernameController.text = namaBaruDiInput;
+    _phoneController.text = nomorBaruDiInput;
 
-      setState(() {
-        _usernameController.text = namaBaruDiInput;
-        _phoneController.text = nomorBaruDiInput;
-      });
+    if (hasil['user'] != null &&
+        hasil['user']['profile_photo'] != null) {
+
+      _serverPhotoUrl =
+          'http://10.0.2.2:8000/storage/${hasil['user']['profile_photo']}';
+
+      _imageFile = null;
+    }
+  });
 
       if (widget.onNameUpdated != null) {
         widget.onNameUpdated!(namaBaruDiInput);
       }
-      // SnackBar Toast 
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Profile data has been saved!'), 
+          content: Text('Profile updated successfully in Database!'), 
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(hasil['message'] ?? 'Gagal update profile.'), backgroundColor: Colors.red),
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Laravel Update Error'),
+          content: Text(hasil['message'] ?? 'Gagal menyimpan ke database.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
       );
     }
   }
 
-  // ==================== LOGIC GANTI PASSWORD DARI BOTTOM SHEET ====================
   void _processChangePassword(String oldPass, String newPass) async {
     if (oldPass.isEmpty || newPass.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -117,10 +169,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     showDialog(context: context, barrierDismissible: false, builder: (context) => const Center(child: CircularProgressIndicator()));
-
     final hasil = await ApiService.changePassword(oldPass, newPass, _emailController.text);
     Navigator.pop(context); 
-
     if (hasil['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Password baru berhasil disimpan di DB!'), backgroundColor: Colors.green),
@@ -136,7 +186,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ==================== TAMPILAN BOTTOM SHEET GANTI PASSWORD ====================
   void _showChangePasswordBottomSheet() {
     final currentPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
@@ -264,7 +313,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 8),
               _buildDialogOption(
                 icon: Icons.delete_outline_rounded, text: 'Remove Current picture', iconColor: Colors.redAccent, textColor: Colors.redAccent,
-                onTap: () { setState(() => _imageFile = null); Navigator.pop(context); },
+                onTap: () { setState(() { _imageFile = null; _serverPhotoUrl = null; }); Navigator.pop(context); },
               ),
             ],
           ),
@@ -296,112 +345,103 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.primaryBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  children: [
-
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18), 
-                      onPressed: () {
-                        try {
-                          final TabController? tabController = DefaultTabController.of(context);
-                          if (tabController != null) {
-                            tabController.index = 0;
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Silakan gunakan menu navigasi di bawah untuk kembali gaes!'), duration: Duration(seconds: 1)),
-                            );
-                          }
-                        } catch (e) {
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
-                    const Text('Edit profile', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.bottomCenter,
+        child: _isProfileLoading 
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
                       children: [
-                        Container(
-                          width: 120, height: 120,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white30, width: 2),
-                            image: _imageFile != null
-                                ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
-                                : DecorationImage(image: NetworkImage(_defaultAvatar), fit: BoxFit.cover),
-                          ),
+                        const Text('Edit profile', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Column(
+                      children: [
+                        Stack(
+                          alignment: Alignment.bottomCenter,
+                          children: [
+                            Container(
+                              width: 120, height: 120,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white30, width: 2),
+                              ),
+                              child: ClipOval(
+                                child: _imageFile != null
+                                    ? Image.file(_imageFile!, fit: BoxFit.cover)
+                                    : (_serverPhotoUrl != null
+                                        ? Image.network(
+                                            _serverPhotoUrl!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return Image.network(_defaultAvatar, fit: BoxFit.cover);
+                                            },
+                                          )
+                                        : Image.network(_defaultAvatar, fit: BoxFit.cover)),
+                              ),
+                            ),
+                            Transform.translate(
+                              offset: const Offset(0, 10),
+                              child: CircleAvatar(
+                                radius: 18, backgroundColor: Colors.black45,
+                                child: IconButton(padding: EdgeInsets.zero, icon: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 18), onPressed: _showEditPictureDialog),
+                              ),
+                            ),
+                          ],
                         ),
-                        Transform.translate(
-                          offset: const Offset(0, 10),
-                          child: CircleAvatar(
-                            radius: 18, backgroundColor: Colors.black45,
-                            child: IconButton(padding: EdgeInsets.zero, icon: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 18), onPressed: _showEditPictureDialog),
+                        const SizedBox(height: 40),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Column(
+                            children: [
+                              _buildProfileInputField(label: 'User Name', controller: _usernameController, icon: Icons.person_outline_rounded),
+                              _buildProfileInputField(label: 'Email', controller: _emailController, icon: Icons.email_outlined, isEmail: true),
+                              
+                              GestureDetector(
+                                onTap: _showChangePasswordBottomSheet,
+                                child: AbsorbPointer(
+                                  child: _buildProfileInputField(label: 'Password', controller: _passwordController, icon: Icons.lock_outline_rounded),
+                                ),
+                              ),
+                              
+                              _buildProfileInputField(label: 'Mobile number', controller: _phoneController, icon: Icons.phone_android_rounded, isPhone: true),
+                              const SizedBox(height: 32),
+                              
+                              SizedBox(
+                                width: double.infinity, height: 50,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A).withAlpha(180), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+                                  onPressed: _isProfileLoading ? null : _showUpdateConfirmationDialog, 
+                                  child: const Text('Update', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: 160, height: 44,
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.redAccent, shape: const StadiumBorder(), elevation: 0),
+                                  icon: const Icon(Icons.logout_rounded, size: 18),
+                                  label: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 40),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Column(
-                        children: [
-                          _buildProfileInputField(label: 'User Name', controller: _usernameController, icon: Icons.person_outline_rounded),
-                          _buildProfileInputField(label: 'Email', controller: _emailController, icon: Icons.email_outlined, isEmail: true),
-                          
-                          GestureDetector(
-                            onTap: _showChangePasswordBottomSheet,
-                            child: AbsorbPointer(
-                              child: _buildProfileInputField(label: 'Password', controller: _passwordController, icon: Icons.lock_outline_rounded),
-                            ),
-                          ),
-                          
-                          _buildProfileInputField(label: 'Mobile number', controller: _phoneController, icon: Icons.phone_android_rounded, isPhone: true),
-                          const SizedBox(height: 32),
-                          
-                          // TOMBOL UPDATE
-                          SizedBox(
-                            width: double.infinity, height: 50,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A).withAlpha(180), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
-                              onPressed: _isProfileLoading ? null : _showUpdateConfirmationDialog, // Manggil Dialog Popup Konfirmasi!
-                              child: _isProfileLoading 
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text('Update', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: 160, height: 44,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.redAccent, shape: const StadiumBorder(), elevation: 0),
-                              icon: const Icon(Icons.logout_rounded, size: 18),
-                              label: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
-                              onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 100),
+                ],
               ),
-              const SizedBox(height: 100),
-            ],
-          ),
-        ),
+            ),
       ),
     );
   }

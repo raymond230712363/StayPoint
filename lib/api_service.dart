@@ -2,10 +2,13 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiService {
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000/api',
-  );
+  // static const String baseUrl = String.fromEnvironment(
+  //   'API_BASE_URL',
+  //   defaultValue: 'http://127.0.0.1:8000/api',
+  // );
+  
+  // EMU
+  static const String baseUrl = 'http://10.0.2.2:8000/api';
 
   static Map<String, String> get _jsonHeaders => {
     'Content-Type': 'application/json',
@@ -87,19 +90,30 @@ class ApiService {
     }
   }
 
-  // Fungsi untuk Update Profile (Username & Phone)
-  static Future<Map<String, dynamic>> updateProfile(
-    String username,
-    String phone,
-    String email,
-  ) async {
+  static Future<Map<String, dynamic>> updateProfile({
+    required String name,
+    required String phone,
+    required String email,
+    String? photoPath, 
+  }) async {
     try {
-      final response = await http.post(
+      // Karena bawa file, wajib pake MultipartRequest
+      final request = http.MultipartRequest(
+        'POST',
         Uri.parse('$baseUrl/profile/update'),
-        headers: _jsonHeaders,
-        body: jsonEncode({'name': username, 'phone': phone, 'email': email}),
-      );
-
+      ); 
+      request.headers.addAll({'Accept': 'application/json'});
+      request.fields.addAll({
+        'name': name,
+        'phone': phone,
+        'email': email,
+      });
+      if (photoPath != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('photo', photoPath),
+        );
+      }
+      final response = await http.Response.fromStream(await request.send());
       return _decode(response);
     } catch (e) {
       return {'success': false, 'message': 'Gagal terhubung ke server: $e'};

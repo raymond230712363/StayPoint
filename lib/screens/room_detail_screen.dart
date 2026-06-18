@@ -7,8 +7,9 @@ import 'review_form_screen.dart';
 class RoomDetailScreen extends StatefulWidget {
   final Map<String, dynamic> room;
   final String email;
+  final String username;
 
-  const RoomDetailScreen({super.key, required this.room, required this.email});
+  const RoomDetailScreen({super.key, required this.room, required this.email, required this.username});
 
   @override
   State<RoomDetailScreen> createState() => _RoomDetailScreenState();
@@ -223,6 +224,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                                       builder: (_) => BookingFormScreen(
                                         room: _room,
                                         email: widget.email,
+                                        username: widget.username,
                                       ),
                                     ),
                                   );
@@ -441,17 +443,17 @@ class _ReviewCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton.icon(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_rounded, size: 16, color: Colors.blueAccent),
-                  label: const Text('Edit', style: TextStyle(color: Colors.blueAccent, fontSize: 12)),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_rounded, size: 16, color: Colors.redAccent),
-                  label: const Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
-                ),
+                // TextButton.icon(
+                //   onPressed: onEdit,
+                //   icon: const Icon(Icons.edit_rounded, size: 16, color: Colors.blueAccent),
+                //   label: const Text('Edit', style: TextStyle(color: Colors.blueAccent, fontSize: 12)),
+                // ),
+                // const SizedBox(width: 8),
+                // TextButton.icon(
+                //   onPressed: onDelete,
+                //   icon: const Icon(Icons.delete_rounded, size: 16, color: Colors.redAccent),
+                //   label: const Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                // ),
               ],
             ),
           ],
