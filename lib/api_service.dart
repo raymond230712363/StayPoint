@@ -110,5 +110,53 @@ class ApiService {
       return {'success': false, 'message': 'Eror terhubung ke server: $e'};
     }
   }
+// ==================== FUNGSI LOGIN GOOGLE ====================
+  static Future<Map<String, dynamic>> loginWithGoogle({
+    required String name,
+    required String email,
+    required String googleId,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login-google'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'google_id': googleId,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal terhubung ke backend saat login Google: $e'
+      };
+    }
+  }
 
+  // Fungsi Eksekusi Simpan Password Baru Setelah Lolos verif 
+  static Future<Map<String, dynamic>> resetPasswordForm({
+    required String email,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/reset-password-save'), 
+        headers: 
+        {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          },
+        body: jsonEncode({
+          'email': email,
+          'new_password': newPassword,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Eror koneksi backend: $e'};
+    }
+  }
+  
 }

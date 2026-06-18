@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../constants/themes.dart';
 import '../widgets/custom_input.dart';
 import '../api_service.dart';
@@ -15,6 +16,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+  scopes: ['email'],
+);
 
   void handleLogin() async {
     setState(() => _isLoading = true);
@@ -44,6 +48,60 @@ class _LoginScreenState extends State<LoginScreen> {
           content: Text(hasil['message'] ?? 'Email atau password salah.'),
         ),
       );
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        // User klik luar / batal milih akun
+        return;
+      }
+
+      // Tampilkan loading muter-muter pas nge-proses biar user gak asal klik layar
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // Tembak data akun Google ke backend Laravel via ApiService
+      final hasil = await ApiService.loginWithGoogle(
+        name: googleUser.displayName ?? 'Google User',
+        email: googleUser.email,
+        googleId: googleUser.id,
+      );
+
+      if (mounted) Navigator.pop(context); // Tutup dialog loading muter-muter tadi
+
+      if (hasil['success'] == true) {
+        // Navigasi langsung bypass masuk ke homepage utama secara gagah berani!
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/main', arguments: {
+            'username': hasil['user']['name'],
+            'email': hasil['user']['email'],
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Welcome back, ${hasil['user']['name']}!'), backgroundColor: Colors.green),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(hasil['message'] ?? 'Login Google Gagal'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (error) {
+      print("Eror Google Sign In: $error");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Terjadi kesalahan sistem: $error'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -110,9 +168,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-              _buildSocialButton(Icons.g_mobiledata_rounded, 'Sign up with Google'),
+              
+              // === 4. TOMBOL GOOGLE SUDAH TERBUNGKUS ONTAP ===
+              _buildSocialButton(Icons.g_mobiledata_rounded, 'Sign up with Google', onTap: _handleGoogleSignIn),
               const SizedBox(height: 12),
-              _buildSocialButton(Icons.facebook_rounded, 'Sign up with Facebook'),
+              _buildSocialButton(Icons.facebook_rounded, 'Sign up with Facebook', onTap: () {
+                // Skenario facebook jika nanti mau dikerjakan mangkal disini gaes
+              }),
             ],
           ),
         ),
@@ -120,14 +182,22 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSocialButton(IconData icon, String text) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: AppColors.textWhite, size: 20),
-        const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: AppColors.textWhite.withOpacity(0.8), fontSize: 13)),
-      ],
+  // Mengubah method agar mendukung aksi klik (onTap)
+  Widget _buildSocialButton(IconData icon, String text, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppColors.textWhite, size: 24),
+            const SizedBox(width: 8),
+            Text(text, style: TextStyle(color: AppColors.textWhite.withOpacity(0.8), fontSize: 13)),
+          ],
+        ),
+      ),
     );
   }
 }

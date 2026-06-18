@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart'; 
 import '../constants/themes.dart';
 import '../widgets/custom_input.dart';
 import '../api_service.dart';
@@ -18,6 +19,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+  );
 
   void handleRegister() async {
     if (_nameController.text.isEmpty ||
@@ -59,7 +64,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SnackBar(content: Text('Registrasi berhasil! Silakan verifikasi akun Anda.'), backgroundColor: Colors.green),
       );
       
-
       Navigator.pushReplacement(
         context, 
         MaterialPageRoute(
@@ -78,6 +82,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: Text(hasil['message'] ?? 'Periksa kembali data yang kamu masukkan.'),
         ),
       );
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        return;
+      }
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final hasil = await ApiService.loginWithGoogle(
+        name: googleUser.displayName ?? 'Google User',
+        email: googleUser.email,
+        googleId: googleUser.id,
+      );
+
+      if (mounted) Navigator.pop(context); 
+
+      if (hasil['success'] == true) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/main', arguments: {
+            'username': hasil['user']['name'],
+            'email': hasil['user']['email'],
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Welcome back, ${hasil['user']['name']}!'), backgroundColor: Colors.green),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(hasil['message'] ?? 'Login Google Gagal'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (error) {
+      print("Eror Google Sign In: $error");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Terjadi kesalahan sistem: $error'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -151,10 +203,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 32),
 
-              _buildSocialButton(Icons.g_mobiledata_rounded, 'Sign up with Google'),
+              _buildSocialButton(Icons.g_mobiledata_rounded, 'Sign up with Google', onTap: _handleGoogleSignIn),
               const SizedBox(height: 12),
-              _buildSocialButton(Icons.facebook_rounded, 'Sign up with Facebook'),
-              const SizedBox(height: 40),
+              _buildSocialButton(Icons.facebook_rounded, 'Sign up with Facebook', onTap: () {
+              }),
+              const SizedBox(height: 10),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -178,14 +231,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildSocialButton(IconData icon, String text) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: AppColors.textWhite, size: 20),
-        const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
-      ],
+  // Mengubah method agar mendukung aksi klik (onTap)
+  Widget _buildSocialButton(IconData icon, String text, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppColors.textWhite, size: 24),
+            const SizedBox(width: 8),
+            Text(text, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
+          ],
+        ),
+      ),
     );
   }
 }

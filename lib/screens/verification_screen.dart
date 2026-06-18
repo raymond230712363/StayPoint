@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/themes.dart';
+import 'reset_password_screen.dart';
 
 class VerificationScreen extends StatefulWidget {
   final String username; 
@@ -10,6 +11,8 @@ class VerificationScreen extends StatefulWidget {
   @override
   State<VerificationScreen> createState() => _VerificationScreenState();
 }
+
+class _RegisterScreenState {} 
 
 class _VerificationScreenState extends State<VerificationScreen> {
   final _code1Controller = TextEditingController();
@@ -54,16 +57,14 @@ class _VerificationScreenState extends State<VerificationScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); 
+              Navigator.pop(context); // Tutup Dialog Pop-up Sukses OTP
 
-              Navigator.pushNamedAndRemoveUntil(
-                context, 
-                '/main', 
-                (route) => false, 
-                arguments: {
-                  'username': widget.username,
-                  'email': widget.email,
-                },
+              // === 2. KUNCI UTAMA: TENDANG KE RESET PASSWORD SCREEN, JANGAN KE HOMEPAGE! ===
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ResetPasswordScreen(email: widget.email), // Oper emailnya ke form ganti sandi baru
+                ),
               );
             },
             child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
