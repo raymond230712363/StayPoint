@@ -209,8 +209,8 @@ class ApiService {
     required String checkIn,
     required String checkOut,
     required List<Map<String, dynamic>> addons,
-    String paymentStatus = 'paid',
-    String status = 'paid',
+    String paymentStatus = 'pending',
+    String status = 'pending',
   }) async {
     try {
       final response = await http.post(
@@ -346,6 +346,36 @@ class ApiService {
       return _decode(response);
     } catch (e) {
       return {'success': false, 'message': 'Gagal mengambil review: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateReview({
+    required String email,
+    required int reviewId,
+    required int rating,
+    required String comment,
+    String? photoPath,
+  }) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/reviews/$reviewId'),
+      );
+      request.fields.addAll({
+        'email': email,
+        'rating': rating.toString(),
+        'comment': comment,
+      });
+      if (photoPath != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('photo', photoPath),
+        );
+      }
+
+      final response = await http.Response.fromStream(await request.send());
+      return _decode(response);
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal memperbarui review: $e'};
     }
   }
 

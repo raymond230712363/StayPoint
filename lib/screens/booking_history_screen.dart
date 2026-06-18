@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_service.dart';
 import '../constants/themes.dart';
 import 'review_form_screen.dart';
+import 'booking_form_screen.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   final String email;
@@ -43,6 +44,26 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   }
 
   Future<void> _cancel(Map<String, dynamic> booking) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.primaryBg,
+        title: const Text('Cancel Booking', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to cancel this booking?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes, Cancel', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
     final result = await ApiService.cancelBooking(
       email: widget.email,
       bookingId: booking['id'],
@@ -62,6 +83,47 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       ),
     );
     if (result['success'] == true) _loadBookings();
+  }
+
+  Future<void> _payNow(Map<String, dynamic> booking) async {
+    setState(() {
+      _isLoading = true;
+    });
+    final result = await ApiService.updateBooking(
+      email: widget.email,
+      bookingId: booking['id'],
+      paymentStatus: 'paid',
+      status: 'paid',
+    );
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result['message'] ??
+              (result['success'] == true
+                  ? 'Pembayaran berhasil!'
+                  : 'Gagal melakukan pembayaran'),
+        ),
+        backgroundColor: result['success'] == true ? Colors.green : Colors.redAccent,
+      ),
+    );
+    if (result['success'] == true) _loadBookings();
+  }
+
+  Future<void> _editBooking(Map<String, dynamic> booking) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BookingFormScreen(
+          email: widget.email,
+          booking: booking,
+        ),
+      ),
+    );
+    if (updated == true) _loadBookings();
   }
 
   Future<void> _review(Map<String, dynamic> booking) async {
@@ -161,6 +223,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         booking: _bookings[index],
         onCancel: () => _cancel(_bookings[index]),
         onReview: () => _review(_bookings[index]),
+        onEdit: () => _editBooking(_bookings[index]),
+        onPay: () => _payNow(_bookings[index]),
       ),
     );
   }
@@ -170,11 +234,15 @@ class _BookingCard extends StatelessWidget {
   final Map<String, dynamic> booking;
   final VoidCallback onCancel;
   final VoidCallback onReview;
+  final VoidCallback onEdit;
+  final VoidCallback onPay;
 
   const _BookingCard({
     required this.booking,
     required this.onCancel,
     required this.onReview,
+    required this.onEdit,
+    required this.onPay,
   });
 
   @override
@@ -267,24 +335,67 @@ class _BookingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              if (booking['status'] == 'pending')
-                TextButton(
-                  onPressed: onCancel,
-                  child: const Text('Cancel Booking'),
+          if (booking['status'] == 'pending') ...[
+            Row(
+              children: [
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  ),
+                  onPressed: onEdit,
+                  child: const Text('Edit Booking'),
                 ),
-              if (canReview)
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: BorderSide(color: Colors.redAccent.withOpacity(0.4)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  ),
+                  onPressed: onCancel,
+                  child: const Text('Cancel'),
+                ),
+                const Spacer(),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.buttonBlue,
                     foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  ),
+                  onPressed: onPay,
+                  child: const Text('Pay Now'),
+                ),
+              ],
+            ),
+          ],
+          if (canReview) ...[
+            Row(
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.buttonBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: onReview,
                   child: const Text('Review Now'),
                 ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );

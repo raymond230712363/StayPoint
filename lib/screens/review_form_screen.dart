@@ -6,11 +6,13 @@ import '../constants/themes.dart';
 class ReviewFormScreen extends StatefulWidget {
   final Map<String, dynamic> booking;
   final String email;
+  final Map<String, dynamic>? review;
 
   const ReviewFormScreen({
     super.key,
     required this.booking,
     required this.email,
+    this.review,
   });
 
   @override
@@ -23,6 +25,15 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
   int _rating = 5;
   XFile? _photo;
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.review != null) {
+      _rating = widget.review!['rating'] ?? 5;
+      _commentController.text = widget.review!['comment'] ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -42,20 +53,31 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
 
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
-    final result = await ApiService.createReview(
-      email: widget.email,
-      bookingId: widget.booking['id'],
-      rating: _rating,
-      comment: _commentController.text,
-      photoPath: _photo?.path,
-    );
+    final Map<String, dynamic> result;
+    if (widget.review != null) {
+      result = await ApiService.updateReview(
+        email: widget.email,
+        reviewId: widget.review!['id'],
+        rating: _rating,
+        comment: _commentController.text,
+        photoPath: _photo?.path,
+      );
+    } else {
+      result = await ApiService.createReview(
+        email: widget.email,
+        bookingId: widget.booking['id'],
+        rating: _rating,
+        comment: _commentController.text,
+        photoPath: _photo?.path,
+      );
+    }
     if (!mounted) return;
     setState(() => _isSubmitting = false);
 
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Review submitted!'),
+        SnackBar(
+          content: Text(widget.review != null ? 'Review updated!' : 'Review submitted!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -72,14 +94,14 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final room = widget.booking['room'] ?? {};
+    final room = Map<String, dynamic>.from(widget.booking['room'] ?? widget.review?['room'] ?? {});
     return Scaffold(
       backgroundColor: AppColors.primaryBg,
       appBar: AppBar(
         backgroundColor: AppColors.primaryBg,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Write Review'),
+        title: Text(widget.review != null ? 'Edit Review' : 'Write Review'),
       ),
       body: SafeArea(
         child: ListView(
@@ -173,6 +195,21 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
                 ),
               ),
             ),
+            if (_photo == null && widget.review?['photo'] != null) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    _getPhotoUrl(widget.review!['photo']),
+                    height: 100,
+                    width: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox(),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
@@ -185,7 +222,9 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
               ),
               onPressed: _pickPhoto,
               icon: const Icon(Icons.add_photo_alternate_rounded),
-              label: Text(_photo == null ? 'Add Photo' : 'Photo Selected'),
+              label: Text(_photo == null
+                  ? (widget.review?['photo'] != null ? 'Change Photo' : 'Add Photo')
+                  : 'Photo Selected'),
             ),
             const SizedBox(height: 22),
             SizedBox(
@@ -201,9 +240,9 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
                 onPressed: _isSubmitting ? null : _submit,
                 child: _isSubmitting
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Submit Review',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                    : Text(
+                        widget.review != null ? 'Update Review' : 'Submit Review',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
               ),
             ),
@@ -218,5 +257,15 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     if (images.isNotEmpty) return images.first['image_url'];
     return room['hotel']?['thumbnail'] ??
         'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80';
+  }
+
+  String _getPhotoUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    final uri = Uri.parse(ApiService.baseUrl);
+    final host = '${uri.scheme}://${uri.host}:${uri.port}';
+    return '$host$path';
   }
 }

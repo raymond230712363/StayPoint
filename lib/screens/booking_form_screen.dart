@@ -4,10 +4,16 @@ import '../constants/themes.dart';
 import 'booking_success_screen.dart';
 
 class BookingFormScreen extends StatefulWidget {
-  final Map<String, dynamic> room;
+  final Map<String, dynamic>? room;
   final String email;
+  final Map<String, dynamic>? booking;
 
-  const BookingFormScreen({super.key, required this.room, required this.email});
+  const BookingFormScreen({
+    super.key,
+    this.room,
+    required this.email,
+    this.booking,
+  });
 
   @override
   State<BookingFormScreen> createState() => _BookingFormScreenState();
@@ -25,6 +31,19 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.booking != null) {
+      _checkIn = DateTime.tryParse(widget.booking!['check_in'] ?? '');
+      _checkOut = DateTime.tryParse(widget.booking!['check_out'] ?? '');
+      final existingAddons = List<Map<String, dynamic>>.from(widget.booking!['addons'] ?? []);
+      for (final addon in existingAddons) {
+        final id = addon['id'] as int;
+        final pivot = addon['pivot'] ?? {};
+        final qty = int.tryParse(pivot['quantity'].toString()) ?? 0;
+        if (qty > 0) {
+          _selectedAddons[id] = qty;
+        }
+      }
+    }
     _loadAddons();
   }
 
@@ -45,13 +64,16 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     });
   }
 
+  Map<String, dynamic> get _room =>
+      widget.room ?? Map<String, dynamic>.from(widget.booking?['room'] ?? {});
+
   int get _nights {
     if (_checkIn == null || _checkOut == null) return 0;
     return _checkOut!.difference(_checkIn!).inDays.clamp(0, 999);
   }
 
   int get _roomTotal =>
-      _nights * (int.tryParse(widget.room['price_per_night'].toString()) ?? 0);
+      _nights * (int.tryParse(_room['price_per_night'].toString()) ?? 0);
 
   int get _addonTotal {
     var total = 0;
@@ -100,28 +122,52 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     }
 
     setState(() => _isSubmitting = true);
-    final result = await ApiService.createBooking(
-      email: widget.email,
-      roomId: widget.room['id'],
-      checkIn: _date(_checkIn!),
-      checkOut: _date(_checkOut!),
-      addons: _selectedAddons.entries
-          .where((entry) => entry.value > 0)
-          .map((entry) => {'id': entry.key, 'quantity': entry.value})
-          .toList(),
-    );
+    final Map<String, dynamic> result;
+    if (widget.booking != null) {
+      result = await ApiService.updateBooking(
+        email: widget.email,
+        bookingId: widget.booking!['id'],
+        checkIn: _date(_checkIn!),
+        checkOut: _date(_checkOut!),
+        addons: _selectedAddons.entries
+            .where((entry) => entry.value > 0)
+            .map((entry) => {'id': entry.key, 'quantity': entry.value})
+            .toList(),
+      );
+    } else {
+      result = await ApiService.createBooking(
+        email: widget.email,
+        roomId: _room['id'],
+        checkIn: _date(_checkIn!),
+        checkOut: _date(_checkOut!),
+        addons: _selectedAddons.entries
+            .where((entry) => entry.value > 0)
+            .map((entry) => {'id': entry.key, 'quantity': entry.value})
+            .toList(),
+      );
+    }
     if (!mounted) return;
     setState(() => _isSubmitting = false);
 
     if (result['success'] == true) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BookingSuccessScreen(
-            booking: Map<String, dynamic>.from(result['booking']),
+      if (widget.booking != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Booking berhasil diperbarui!'),
+            backgroundColor: Colors.green,
           ),
-        ),
-      );
+        );
+        Navigator.pop(context, true);
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookingSuccessScreen(
+              booking: Map<String, dynamic>.from(result['booking']),
+            ),
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -140,7 +186,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         backgroundColor: AppColors.primaryBg,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Request to Book'),
+        title: Text(widget.booking != null ? 'Edit Booking' : 'Request to Book'),
       ),
       body: SafeArea(
         child: _isLoading
@@ -184,7 +230,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                     const SizedBox(height: 18),
                     _SummaryRow(
                       label: 'Room',
-                      value: widget.room['room_name'] ?? '-',
+                      value: _room['room_name'] ?? '-',
                     ),
                     _SummaryRow(label: 'Night', value: '$_nights night'),
                     _SummaryRow(
@@ -234,9 +280,9 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                             ? const CircularProgressIndicator(
                                 color: Colors.white,
                               )
-                            : const Text(
-                                'Confirm and Pay',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                            : Text(
+                                widget.booking != null ? 'Save Changes' : 'Confirm and Pay',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                       ),
                     ),

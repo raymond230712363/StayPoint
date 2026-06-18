@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_service.dart';
 import '../constants/themes.dart';
 import 'booking_form_screen.dart';
+import 'review_form_screen.dart';
 
 class RoomDetailScreen extends StatefulWidget {
   final Map<String, dynamic> room;
@@ -24,14 +25,16 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     _loadRoom();
   }
 
-  Future<void> _loadRoom() async {
+  Future<void> _loadRoom({bool silent = false}) async {
     final roomId = _room['id'];
     if (roomId == null) return;
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     final result = await ApiService.getRoom(roomId);
     if (!mounted) return;
     setState(() {
@@ -247,7 +250,70 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                             )
                           else
                             ...reviews.map(
-                              (review) => _ReviewCard(review: review),
+                              (review) => _ReviewCard(
+                                review: review,
+                                currentEmail: widget.email,
+                                onEdit: () async {
+                                  final updated = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ReviewFormScreen(
+                                        booking: Map<String, dynamic>.from(review['booking'] ?? {}),
+                                        email: widget.email,
+                                        review: Map<String, dynamic>.from(review),
+                                      ),
+                                    ),
+                                  );
+                                  if (!context.mounted) return;
+                                  if (updated == true) {
+                                    _loadRoom(silent: true);
+                                  }
+                                },
+                                onDelete: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: AppColors.primaryBg,
+                                      title: const Text('Delete Review', style: TextStyle(color: Colors.white)),
+                                      content: const Text('Are you sure you want to delete this review?', style: TextStyle(color: Colors.white70)),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, true),
+                                          child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (!context.mounted) return;
+                                  if (confirm == true) {
+                                    final res = await ApiService.deleteReview(
+                                      email: widget.email,
+                                      reviewId: review['id'],
+                                    );
+                                    if (!context.mounted) return;
+                                    if (res['success'] == true) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Review deleted!'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                      _loadRoom(silent: true);
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(res['message'] ?? 'Gagal menghapus review'),
+                                          backgroundColor: Colors.redAccent,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
                             ),
                         ],
                       ),
@@ -296,10 +362,32 @@ class _FacilityChip extends StatelessWidget {
 
 class _ReviewCard extends StatelessWidget {
   final Map<String, dynamic> review;
-  const _ReviewCard({required this.review});
+  final String currentEmail;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  const _ReviewCard({
+    required this.review,
+    required this.currentEmail,
+    this.onEdit,
+    this.onDelete,
+  });
+
+  String _getPhotoUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    final uri = Uri.parse(ApiService.baseUrl);
+    final host = '${uri.scheme}://${uri.host}:${uri.port}';
+    return '$host$path';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isOwnReview = review['user']?['email'] == currentEmail;
+    final photo = review['photo'];
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -333,6 +421,38 @@ class _ReviewCard extends StatelessWidget {
             Text(
               review['comment'],
               style: TextStyle(color: Colors.white.withOpacity(0.72)),
+            ),
+          ],
+          if (photo != null && photo.toString().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                _getPhotoUrl(photo),
+                height: 100,
+                width: 100,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox(),
+              ),
+            ),
+          ],
+          if (isOwnReview) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_rounded, size: 16, color: Colors.blueAccent),
+                  label: const Text('Edit', style: TextStyle(color: Colors.blueAccent, fontSize: 12)),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_rounded, size: 16, color: Colors.redAccent),
+                  label: const Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                ),
+              ],
             ),
           ],
         ],
