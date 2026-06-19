@@ -30,12 +30,13 @@ class ApiService {
   static Future<Map<String, dynamic>> login(
     String email,
     String password,
+    String phone,
   ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: _jsonHeaders,
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({'email': email, 'password': password, 'phone' : phone}),
       );
       return _decode(response);
     } catch (e) {

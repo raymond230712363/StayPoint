@@ -15,19 +15,46 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _phoneController = TextEditingController(); 
   bool _isLoading = false;
+  
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-  scopes: ['email'],
-);
+    scopes: ['email'],
+  );
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _phoneController.dispose(); 
+    super.dispose();
+  }
 
   void handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final phone = _phoneController.text.trim();
+
+    // === VALIDASI FRONT-END (AGAR TIDAK TEMBUS ASAL KETIK) ===
+    if (email.isEmpty || password.isEmpty || phone.isEmpty) {
+      _showWarningDialog('Login Gagal', 'Semua field wajib diisi!');
+      return;
+    }
+
+    // Standar nomor telepon Indonesia umumnya minimal 10-13 digit
+    if (phone.length < 10) {
+      _showWarningDialog('Input Tidak Valid', 'Nomor telepon minimal harus 10 digit.');
+      return;
+    }
+
     setState(() => _isLoading = true);
-    final hasil = await ApiService.login(_emailController.text, _passwordController.text);
+    final hasil = await ApiService.login(email, password, phone);
     setState(() => _isLoading = false);
 
     if (hasil['success'] == true) {
       String namaUser = hasil['user']['name']; 
       String emailUser = hasil['user']['email'] ?? 'user@gmail.com'; 
+      String phoneUser = hasil['user']['phone'] ?? '6767676767'; 
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Selamat datang, $namaUser!'), backgroundColor: Colors.green),
@@ -38,50 +65,56 @@ class _LoginScreenState extends State<LoginScreen> {
         arguments: {
           'username': namaUser,
           'email': emailUser,
+          'phone' : phoneUser,
         }, 
       );
     } else {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Login Gagal'),
-          content: Text(hasil['message'] ?? 'Email atau password salah.'),
-        ),
-      );
+      _showWarningDialog('Login Gagal', hasil['message'] ?? 'Email, password, atau nomor telepon salah.');
     }
+  }
+
+  // Helper widget untuk menampilkan dialog error agar kode lebih bersih
+  void _showWarningDialog(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleGoogleSignIn() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
-      if (googleUser == null) {
-        // User klik luar / batal milih akun
-        return;
-      }
+      if (googleUser == null) return;
 
-      // Tampilkan loading muter-muter pas nge-proses biar user gak asal klik layar
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      // Tembak data akun Google ke backend Laravel via ApiService
       final hasil = await ApiService.loginWithGoogle(
         name: googleUser.displayName ?? 'Google User',
         email: googleUser.email,
         googleId: googleUser.id,
       );
 
-      if (mounted) Navigator.pop(context); // Tutup dialog loading muter-muter tadi
+      if (mounted) Navigator.pop(context); 
 
       if (hasil['success'] == true) {
-        // Navigasi langsung bypass masuk ke homepage utama secara gagah berani!
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/main', arguments: {
             'username': hasil['user']['name'],
             'email': hasil['user']['email'],
+            'phone': hasil['user']['phone'] ?? '',
           });
           
           ScaffoldMessenger.of(context).showSnackBar(
@@ -119,12 +152,25 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text('Login Account', style: AppTextStyle.heading),
               const SizedBox(height: 8),
               Text(
-                'Enter your email & password number',
-                style: TextStyle(color: AppColors.textWhite.withOpacity(0.6), fontSize: 13),
+                'Enter your details to login',
+                style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
               ),
               const SizedBox(height: 48),
-              CustomInputField(controller: _emailController, hintText: 'Email or Phone Number'),
+              
+              // === INPUT FIELDS ===
+              CustomInputField(controller: _emailController, hintText: 'Email'),
+              const SizedBox(height: 12), 
+              
+              CustomInputField(
+                controller: _phoneController, 
+                hintText: 'Phone Number',
+                // Catatan: Jika CustomInputField milikmu membungkus TextField asli,
+                // pastikan komponen tersebut dipasangi tipe keyboard nomor/telepon.
+              ),
+              const SizedBox(height: 12),
+              
               CustomInputField(controller: _passwordController, hintText: 'Password', obscureText: true),
+              
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -169,12 +215,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 40),
               
-              // === 4. TOMBOL GOOGLE SUDAH TERBUNGKUS ONTAP ===
               _buildSocialButton(Icons.g_mobiledata_rounded, 'Sign up with Google', onTap: _handleGoogleSignIn),
               const SizedBox(height: 12),
-              _buildSocialButton(Icons.facebook_rounded, 'Sign up with Facebook', onTap: () {
-                // Skenario facebook jika nanti mau dikerjakan mangkal disini gaes
-              }),
+              _buildSocialButton(Icons.facebook_rounded, 'Sign up with Facebook', onTap: () {}),
             ],
           ),
         ),
@@ -182,7 +225,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Mengubah method agar mendukung aksi klik (onTap)
   Widget _buildSocialButton(IconData icon, String text, {VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap,
