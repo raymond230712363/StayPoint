@@ -296,7 +296,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         onEdit: () => _editBooking(_bookings[index]),
         onMarkAsEdited: (id) => _saveBannedReview(id),
         onRefreshHistory: _loadBookings,
-        onPay: () => _payNow(_bookings[index]), // Callback buat eksekusi pay
+        onPay: () => _payNow(_bookings[index]), 
       ),
     );
   }
